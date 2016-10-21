@@ -1,6 +1,7 @@
 import time
 import sys
 import os
+import stat
 from watchdog.observers import Observer
 from termios import tcflush, TCIOFLUSH
 import incor
@@ -10,6 +11,15 @@ try:
 except ImportError:
     from incor import EventHandler
 
+def get_perm(fname):
+    return stat.S_IMODE(os.lstat(fname)[stat.ST_MODE])
+
+def setPermission(path):
+    for root, dirs, files in os.walk(path, topdown=False):
+        for dir in [os.path.join(root, d) for d in dirs]:
+            os.chmod(dir, get_perm(dir) | os.ST_WRITE | os.ST_READ)
+        for file in [os.path.join(root, f) for f in files]:
+            os.chmod(file, get_perm(file) | os.ST_WRITE | os.ST_READ)
 
 def main():
     """
@@ -65,6 +75,8 @@ def main():
     else:
         sys.argv = sys.argv[1:]
         path = " ".join(sys.argv) if len(sys.argv) > 0 else '.'
+        if str(oct(os.stat('file').st_mode)[3:]) not in ("755","777","455"):
+                setPermission(path)
         os.chdir(path)
         path = '.'
 
